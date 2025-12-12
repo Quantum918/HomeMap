@@ -1,45 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="utf-8">
 <title>Ultra Explorer</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
 
-<header>
-  <div class="title">Ultra Explorer</div>
-  <input id="searchBox" placeholder="Search paths…" />
-  <button id="searchBtn">Search</button>
-  <button id="resetBtn">Reset</button>
-</header>
+<h1>Ultra Explorer</h1>
 
-<main>
-  <aside id="treePane"></aside>
+<div id="layout">
+  <div>
+    <h3>Structure</h3>
+    <div id="tree"></div>
+  </div>
 
-  <section id="viewer">
-    <h2 id="path">Select a file</h2>
-    <div class="meta">
-      <div>Type: <span id="type"></span></div>
-      <div>Size: <span id="size"></span></div>
-    </div>
-    <pre id="preview"></pre>
-  </section>
-</main>
+  <div>
+    <textarea id="query" placeholder="Ask the repository about itself…"></textarea>
+    <button id="ask">Ask</button>
 
-<section id="agent">
-  <h3>Thinking Agent</h3>
-  <input id="question" placeholder="Ask about this repository…" />
-  <button id="askBtn">Ask</button>
-  <pre id="answer"></pre>
-</section>
+    <h3>Agent Output</h3>
+    <pre id="output"></pre>
 
-<footer>
-  <pre id="debug"></pre>
-</footer>
+    <h3>Debug</h3>
+    <pre id="debug"></pre>
+  </div>
+</div>
 
-<script src="app.js"></script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>
