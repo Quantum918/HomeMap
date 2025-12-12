@@ -1,5 +1,6 @@
 {
-  "files": [
+  "file": "home.index.bin",
+  "parts": [
     "home.index.bin.part_00",
     "home.index.bin.part_01",
     "home.index.bin.part_02",
@@ -11,7 +12,5 @@
     "home.index.bin.part_08",
     "home.index.bin.part_09",
     "home.index.bin.part_10"
-  ],
-  "original_size": 1033851808,
-  "part_size": 99614720
+  ]
 }
