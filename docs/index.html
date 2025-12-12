@@ -1,39 +1,78 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8" />
-<title>Ultra Explorer V5</title>
-<link rel="stylesheet" href="./main.css" />
+<meta charset="UTF-8">
+<title>Ultra Explorer — HomeMap</title>
 <style>
-#debug {
-    white-space: pre-wrap;
+body {
+    background: #111;
+    color: #eee;
     font-family: monospace;
-    color: #0f0;
+    margin: 0;
+    padding: 0;
+}
+#debug {
     background: #000;
-    padding: 8px;
-    height: 180px;
-    overflow-y: scroll;
-    border: 1px solid #444;
+    padding: 10px;
+    height: 200px;
+    overflow-y: auto;
+    color: #0f0;
+    white-space: pre-wrap;
+    border-bottom: 1px solid #333;
+}
+#file-info, #preview {
+    padding: 10px;
 }
 </style>
 </head>
 <body>
 
-<h2>Ultra Explorer</h2>
+<h2 style="padding:10px;">Ultra Explorer</h2>
 
-<div id="debug">[Debug log initialized]</div>
+<pre id="debug">[Debug log initialized]</pre>
 
-<div id="tree"></div>
-
-<div id="filePanel">
+<div id="file-info">
     <h3>Select a file</h3>
-    <div><b>Path:</b> <span id="metaPath"></span></div>
-    <div><b>Type:</b> <span id="metaType"></span></div>
-    <div><b>Size:</b> <span id="metaSize"></span></div>
-    <h3>Preview</h3>
-    <pre id="preview"></pre>
+    Path:<br>
+    Type:<br>
+    Size:<br>
 </div>
 
-<script type="module" src="./app.js"></script>
+<div id="preview">
+    <h3>Preview</h3>
+</div>
+
+<script type="module">
+import { autoloadHomeMap } from "./js/home_index_autoload.js";
+import { HomeMapLoader } from "./js/home_map_loader.js";
+import { HomeAgentThinking } from "./js/home_agent_thinking.js";
+
+const dbg = document.getElementById("debug");
+
+function log(msg) {
+    dbg.textContent += msg + "\n";
+}
+
+(async () => {
+    log("[UI] Starting autoload...");
+
+    try {
+        const loader = await autoloadHomeMap(HomeMapLoader);
+        log("[UI] HomeMap Loader ready.");
+
+        const agent = new HomeAgentThinking(loader);
+        window.agent = agent;
+
+        // debugging list
+        const root = loader.list_prefix("/");
+        log("[UI] Root entries found: " + root.length);
+
+        log("[UI] Autoload complete.");
+    } catch (err) {
+        log("[ERROR] " + err.message);
+    }
+})();
+</script>
+
 </body>
 </html>
