@@ -1,78 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Ultra Explorer — HomeMap</title>
-<style>
-body {
-    background: #111;
-    color: #eee;
-    font-family: monospace;
-    margin: 0;
-    padding: 0;
-}
-#debug {
-    background: #000;
-    padding: 10px;
-    height: 200px;
-    overflow-y: auto;
-    color: #0f0;
-    white-space: pre-wrap;
-    border-bottom: 1px solid #333;
-}
-#file-info, #preview {
-    padding: 10px;
-}
-</style>
+<title>Ultra Explorer</title>
+
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="main.css">
+
 </head>
+
 <body>
+<h1>Ultra Explorer</h1>
 
-<h2 style="padding:10px;">Ultra Explorer</h2>
-
-<pre id="debug">[Debug log initialized]</pre>
-
-<div id="file-info">
-    <h3>Select a file</h3>
-    Path:<br>
-    Type:<br>
-    Size:<br>
+<div id="debug" style="background:black;color:#0f0;padding:10px;height:180px;overflow:auto;">
+[Debug log initialized]
 </div>
 
-<div id="preview">
-    <h3>Preview</h3>
+<div id="app">
+    <div id="tree-pane">
+        <div id="tree-header">
+            <input id="searchBox" placeholder="Search files or paths…"/>
+            <button id="searchBtn">Search</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+        <div id="tree"></div>
+    </div>
+
+    <div id="info-pane">
+        <h2 id="fileTitle">Select a file</h2>
+        <div id="meta">
+            <div><b>Path:</b> <span id="metaPath"></span></div>
+            <div><b>Type:</b> <span id="metaType"></span></div>
+            <div><b>Size:</b> <span id="metaSize"></span></div>
+        </div>
+
+        <h3>Preview</h3>
+        <pre id="preview"></pre>
+    </div>
 </div>
 
-<script type="module">
-import { autoloadHomeMap } from "./js/home_index_autoload.js";
-import { HomeMapLoader } from "./js/home_map_loader.js";
-import { HomeAgentThinking } from "./js/home_agent_thinking.js";
-
-const dbg = document.getElementById("debug");
-
-function log(msg) {
-    dbg.textContent += msg + "\n";
-}
-
-(async () => {
-    log("[UI] Starting autoload...");
-
-    try {
-        const loader = await autoloadHomeMap(HomeMapLoader);
-        log("[UI] HomeMap Loader ready.");
-
-        const agent = new HomeAgentThinking(loader);
-        window.agent = agent;
-
-        // debugging list
-        const root = loader.list_prefix("/");
-        log("[UI] Root entries found: " + root.length);
-
-        log("[UI] Autoload complete.");
-    } catch (err) {
-        log("[ERROR] " + err.message);
-    }
-})();
-</script>
+<!-- CRITICAL FIX: root-relative script path -->
+<script type="module" src="/HomeMap/app.js"></script>
 
 </body>
 </html>
