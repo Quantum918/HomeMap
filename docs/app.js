@@ -1,116 +1,107 @@
-import { ManifestLoader } from "./manifest_loader.js";
+// Ultra Explorer – GLOBAL DEBUG MODE (unbreakable bootstrap)
 
-const BASE = "./";
-const DATA = BASE + "data/";
-const BIN_MAP   = DATA + "home.map.bin.part_aa";
-const BIN_TAGS  = DATA + "home.tags.bin.part_00";
-const INDEX_PARTS = [
-    "home.index.bin.part_aa",
-    "home.index.bin.part_ab",
-    "home.index.bin.part_ac",
-    "home.index.bin.part_ad",
-    "home.index.bin.part_ae",
-    "home.index.bin.part_af",
-    "home.index.bin.part_ag",
-    "home.index.bin.part_ah",
-    "home.index.bin.part_ai",
-    "home.index.bin.part_aj",
-    "home.index.bin.part_ak"
-];
-
-const WASM_FILE = BASE + "bin/manifest_loader.wasm";
-
-let loader = null;
-
-async function fetchBin(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch " + url);
-    return new Uint8Array(await res.arrayBuffer());
+function dbg(msg) {
+    const el = document.getElementById("debug");
+    el.textContent += msg + "\n";
+    console.log(msg);
 }
 
-async function init() {
+// =========================================================================
+// GLOBAL ERROR TRAPS — NOTHING CAN SILENT-FAIL ANYMORE
+// =========================================================================
+window.addEventListener("error", e => {
+    dbg("[JS ERROR] " + e.message + " @ " + e.filename + ":" + e.lineno);
+});
 
-    const log = msg => {
-        const dbg = document.getElementById("dbg");
-        dbg.innerText += msg + "\n";
-    };
+window.addEventListener("unhandledrejection", e => {
+    dbg("[PROMISE ERROR] " + e.reason);
+});
 
-    log("[INIT] Starting autoload…");
+// =========================================================================
+// BOOTSTRAP
+// =========================================================================
+document.addEventListener("DOMContentLoaded", () => {
+    dbg("[BOOT] DOM Loaded — Ultra Explorer Global Debug Mode");
 
-    try {
-        log("[INIT] Loading WASM…");
-        const wasmBytes = await fetchBin(WASM_FILE);
+    // Auto-detect correct base path for GitHub Pages
+    // Example: /HomeMap/index.html → /HomeMap/
+    const base = window.location.pathname.replace(/[^\/]+$/, "");
+    dbg("[PATH] Base path detected: " + base);
 
-        log("[INIT] Loading map + tags…");
-        const mapBin  = await fetchBin(BIN_MAP);
-        const tagsBin = await fetchBin(BIN_TAGS);
+    const wasmURL = base + "bin/manifest_loader.wasm";
+    const jsURL   = base + "manifest_loader.js";
+    dbg("[LOAD] WASM URL → " + wasmURL);
+    dbg("[LOAD] JS Loader URL → " + jsURL);
 
-        log("[INIT] Loading index parts…");
-        let indexCombined = [];
-        for (let p of INDEX_PARTS) {
-            const buf = await fetchBin(DATA + p);
-            indexCombined.push(buf);
-            log("  loaded " + p + " (" + buf.length + ")");
-        }
+    // =========================================================================
+    // LOAD THE LOADER.JS MODULE
+    // =========================================================================
+    import(jsURL)
+        .then(module => {
+            dbg("[MODULE] manifest_loader.js imported OK");
 
-        const indexBin = new Uint8Array(indexCombined.reduce((a,b)=>a+b.length,0));
-        let offset = 0;
-        for (let part of indexCombined) {
-            indexBin.set(part, offset);
-            offset += part.length;
-        }
+            // ensure module.default exists
+            if (!module.default) {
+                dbg("[ERROR] manifest_loader.js has NO default export!");
+                return;
+            }
 
-        log("[INIT] Creating loader…");
+            dbg("[CALL] module.default({ locateFile })");
 
-        loader = new ManifestLoader(
-            wasmBytes,
-            mapBin,
-            tagsBin,
-            indexBin
-        );
+            return module.default({
+                locateFile: p => {
+                    const resolved = base + "bin/" + p;
+                    dbg("[locateFile] " + p + " → " + resolved);
+                    return resolved;
+                }
+            });
+        })
+        .then(instance => {
+            if (!instance) {
+                dbg("[FATAL] loader returned null instance");
+                return;
+            }
 
-        log("[INIT] Loader ready — building tree…");
-        await buildTree("/");
-        log("[INIT] DONE.");
+            dbg("[WASM] Loader OK — WASM instance created");
+            dbg("[WASM EXPORTS] " + Object.keys(instance).join(", "));
 
-    } catch (err) {
-        console.error(err);
-        document.getElementById("dbg").innerText += "\n[ERROR] " + err + "\n";
-    }
+            window.Ultra = instance;   // expose for debugging
+
+            // After WASM loads, fetch directory manifests
+            loadDirectory(base);
+        })
+        .catch(err => {
+            dbg("[FATAL ERROR DURING WASM/JS INIT]");
+            dbg(err.toString());
+        });
+});
+
+// =========================================================================
+// LOAD DIRECTORY MANIFESTS (tags + map + index)
+// =========================================================================
+function loadDirectory(base) {
+    dbg("[DIR] Loading directory manifests…");
+
+    const manifestPaths = [
+        base + "data/home.tags.bin.manifest.json",
+        base + "data/home.map.bin.manifest.json",
+        base + "data/home.index.bin.manifest.json"
+    ];
+
+    manifestPaths.forEach(url => {
+        fetch(url)
+            .then(r => {
+                dbg("[FETCH] " + url + " → HTTP " + r.status);
+                if (!r.ok) throw new Error("Manifest fetch failed: " + url);
+                return r.json();
+            })
+            .then(j => {
+                dbg("[MANIFEST] Parsed OK: " + url);
+                dbg("[MANIFEST FILES] " + JSON.stringify(j).slice(0, 200) + "…");
+            })
+            .catch(err => {
+                dbg("[MANIFEST ERROR] " + err.toString());
+            });
+    });
 }
 
-async function buildTree(prefix) {
-    const tree = document.getElementById("tree");
-    tree.innerHTML = "";
-
-    const items = loader.list_prefix(prefix) || [];
-    items.sort();
-
-    for (const p of items) {
-        const div = document.createElement("div");
-        div.className = p.endsWith("/") ? "folder" : "file";
-        div.textContent = p.replace(prefix, "");
-        div.onclick = () => selectPath(p);
-        tree.appendChild(div);
-    }
-}
-
-function selectPath(path) {
-    document.getElementById("fileTitle").textContent = path;
-    document.getElementById("metaPath").textContent  = path;
-
-    const offset = loader.lookup(path);
-    if (offset === null) {
-        document.getElementById("preview").textContent = "[No preview]";
-        return;
-    }
-
-    const preview = loader.preview(offset, 2048);
-    document.getElementById("preview").textContent = preview;
-
-    const meta = loader.getTags(offset);
-    document.getElementById("metaType").textContent = meta.mime;
-    document.getElementById("metaSize").textContent = meta.size + " bytes";
-}
-
-window.onload = init;
