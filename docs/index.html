@@ -1,43 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Ultra Explorer v2 — AGI Filesystem Console</title>
-    <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8">
+<title>HomeMap Explorer</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="main.css">
 </head>
 
 <body>
-    <div id="container">
-
-        <!-- LEFT PANE: TREE -->
-        <div id="tree-pane">
-            <div id="tree-header">
-                <input id="searchBox" placeholder="Search files or paths…" />
-                <button id="searchBtn">Search</button>
-                <button id="resetBtn">Reset</button>
-            </div>
-            <div id="tree"></div>
+<div id="app">
+    <div id="tree-pane">
+        <div id="tree-header">
+            <input id="searchBox" placeholder="Search files or paths…"/>
+            <button id="searchBtn">Search</button>
+            <button id="resetBtn">Reset</button>
         </div>
-
-        <!-- RIGHT PANE: METADATA + PREVIEW -->
-        <div id="info-pane">
-            <h2 id="fileTitle">Select a file</h2>
-
-            <div id="meta">
-                <div><b>Path:</b> <span id="metaPath"></span></div>
-                <div><b>Type:</b> <span id="metaType"></span></div>
-                <div><b>Size:</b> <span id="metaSize"></span></div>
-                <div><b>Tags:</b> <span id="metaTags"></span></div>
-
-                <button id="openGitHub" class="metaBtn">Open on GitHub</button>
-            </div>
-
-            <h3>Preview</h3>
-            <pre id="preview"></pre>
-        </div>
-
+        <div id="tree"></div>
     </div>
 
-    <script src="app.js"></script>
+    <div id="info-pane">
+        <h2 id="fileTitle">Select a file</h2>
+
+        <div id="meta">
+            <div><b>Path:</b> <span id="metaPath"></span></div>
+            <div><b>Type:</b> <span id="metaType"></span></div>
+            <div><b>Size:</b> <span id="metaSize"></span></div>
+        </div>
+
+        <h3>Preview</h3>
+        <pre id="preview"></pre>
+    </div>
+</div>
+
+<script type="module" src="app.js"></script>
+
 </body>
 </html>

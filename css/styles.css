@@ -1,0 +1,80 @@
+body {
+    margin: 0;
+    height: 100vh;
+    background: #111;
+    color: #eee;
+    font-family: Consolas, monospace;
+    display: flex;
+    overflow: hidden;
+}
+
+#root {
+    display: flex;
+    width: 100%;
+}
+
+#tree-pane {
+    width: 32%;
+    border-right: 1px solid #333;
+    background: #181818;
+    display: flex;
+    flex-direction: column;
+}
+
+#tree-header {
+    padding: 8px;
+    background: #202020;
+    border-bottom: 1px solid #333;
+}
+
+#tree-header input {
+    width: 55%;
+    padding: 6px;
+    background: #000;
+    color: #fff;
+    border: 1px solid #333;
+}
+
+#tree-header button {
+    padding: 6px 10px;
+    margin-left: 4px;
+    border: 1px solid #555;
+    background: #222;
+    color: #ddd;
+    cursor: pointer;
+}
+
+#tree {
+    overflow-y: scroll;
+    flex: 1;
+    padding: 8px;
+}
+
+#tree .file {
+    padding: 4px;
+    cursor: pointer;
+}
+
+#tree .folder {
+    padding: 4px;
+    color: #4cf;
+    cursor: pointer;
+}
+
+#tree div:hover {
+    background: #333;
+}
+
+#info-pane {
+    flex: 1;
+    padding: 12px;
+    overflow-y: scroll;
+}
+
+#preview {
+    background: #000;
+    border: 1px solid #333;
+    padding: 10px;
+    white-space: pre;
+    overflow-x: scroll;
+}

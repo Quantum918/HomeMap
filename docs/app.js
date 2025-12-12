@@ -1,295 +1,87 @@
-// Ultra Explorer v2 — AGI Filesystem Console
-// Hybrid Mode C: top-level immediate, deep lazy-load, scalable to millions.
+import initWasm from "./manifest_loader.js";
+import { ManifestLoader } from "./manifest_loader.js";
 
-// Manifest location in your GitHub
-const MANIFEST_URL =
-  "https://raw.githubusercontent.com/Quantum918/HomeMap/main/home_full_manifest.txt";
+const DATA = "./data";
+const BIN_MAP   = DATA + "/home.map.bin";
+const BIN_TAGS  = DATA + "/home.tags.bin";
+const BIN_INDEX = DATA + "/home.index.bin";
+const WASM_FILE = "./bin/manifest_loader.wasm";
 
-// Global caches
-let ALL_PATHS = [];
-let TREE = {};   // root tree (top-level only)
-let PREVIEW_CACHE = {};
+let loader = null;
 
-//----------------------------------------
-// Load manifest file (603k+ lines)
-//----------------------------------------
-async function loadManifest() {
-    const res = await fetch(MANIFEST_URL);
-    const text = await res.text();
-
-    ALL_PATHS = text
-        .split("\n")
-        .map(x => x.trim())
-        .filter(Boolean);
-
-    return ALL_PATHS;
+async function fetchBin(url) {
+    const res = await fetch(url);
+    return new Uint8Array(await res.arrayBuffer());
 }
 
-//----------------------------------------
-// Build only the top-level tree
-//----------------------------------------
-function buildTopLevelTree(paths) {
-    const root = {};
+async function init() {
+    console.log("[APP] Loading WASM + data…");
 
-    for (const full of paths) {
-        const parts = full.split("/").filter(Boolean);
+    const wasmBytes  = await fetchBin(WASM_FILE);
+    const mapBin     = await fetchBin(BIN_MAP);
+    const tagsBin    = await fetchBin(BIN_TAGS);
+    const indexBin   = await fetchBin(BIN_INDEX);
 
-        if (parts.length === 0) continue;
+    const wasmModule = await initWasm({ wasmBinary: wasmBytes });
+    loader = new ManifestLoader(wasmModule, mapBin, tagsBin, indexBin);
 
-        const top = parts[0];
-
-        if (!root[top]) {
-            root[top] = { _type: "folder", _children: {}, _loaded: false };
-        }
-    }
-    return root;
+    console.log("[APP] Ready.");
+    await buildTree("/");
 }
 
-//----------------------------------------
-// Given a folder path, load its immediate children only
-//----------------------------------------
-function expandFolder(fullPath) {
-    const target = TREE;
-    const parts = fullPath.split("/").filter(Boolean);
+async function buildTree(prefix) {
+    const tree = document.getElementById("tree");
+    tree.innerHTML = "";
 
-    let node = target;
-    for (const p of parts) {
-        if (!node[p]) return null;
-        node = node[p]._children;
-    }
+    const items = loader.list_prefix(prefix);
+    items.sort();
 
-    // If already loaded → do nothing
-    const folderNode = getNode(fullPath);
-    if (folderNode._loaded) return folderNode;
-
-    // Populate children
-    for (const full of ALL_PATHS) {
-        if (full === fullPath) continue;
-
-        if (full.startsWith(fullPath + "/")) {
-            const rel = full.slice(fullPath.length + 1);
-            if (!rel.includes("/")) {
-                // Direct child
-                const isFolder = ALL_PATHS.some(p => p.startsWith(full + "/"));
-                folderNode._children[rel] = {
-                    _type: isFolder ? "folder" : "file",
-                    _children: {},
-                    _loaded: false
-                };
-            }
-        }
-    }
-
-    folderNode._loaded = true;
-    return folderNode;
-}
-
-//----------------------------------------
-// Utility: get node by full path
-//----------------------------------------
-function getNode(fullPath) {
-    const parts = fullPath.split("/").filter(Boolean);
-    let node = TREE;
-    for (const p of parts) {
-        node = node[p];
-        if (!node) return null;
-        node = node._children;
-    }
-    // folderNode lives one level above
-    const parent = TREE;
-    let current = TREE;
-    for (const p of parts) {
-        parent = current;
-        current = current[p];
-        if (!current) break;
-        current = current._children;
-    }
-    return current ? current.__proto__ : null;
-}
-
-// Actually simpler: direct walk to node
-function getFolderNode(path) {
-    const parts = path.split("/").filter(Boolean);
-    let node = TREE;
-    for (const p of parts) {
-        if (!node[p]) return null;
-        node = node[p];
-        if (node._type !== "folder") return null;
-        node = node._children;
-    }
-    return node;
-}
-
-//----------------------------------------
-// Render a folder level into #tree
-//----------------------------------------
-function renderTree(rootObj, prefix = "", container = document.getElementById("tree")) {
-    container.innerHTML = "";
-
-    Object.keys(rootObj).sort().forEach(key => {
-        const obj = rootObj[key];
-        const isFolder = obj._type === "folder";
-
+    for (const p of items) {
         const div = document.createElement("div");
-        div.classList.add(isFolder ? "folder" : "file");
-        div.textContent = key;
-
-        // CSS class by type (sigil, gguf, etc.)
-        if (!isFolder) {
-            let ext = key.split(".").pop();
-            if (ext === "py") div.classList.add("py");
-            if (ext === "json") div.classList.add("json");
-            if (key.endsWith(".sigil.json")) div.classList.add("sigil");
-            if (key.endsWith(".gguf")) div.classList.add("gguf");
-        }
-
-        div.onclick = () => {
-            const full = prefix ? prefix + "/" + key : key;
-
-            if (isFolder) {
-                handleFolderClick(full, div);
-            } else {
-                handleFileSelect(full);
-            }
-        };
-
-        container.appendChild(div);
-    });
+        div.className = p.endsWith("/") ? "folder" : "file";
+        div.textContent = p.replace(prefix, "");
+        div.onclick = () => selectPath(p);
+        tree.appendChild(div);
+    }
 }
 
-//----------------------------------------
-// When clicking a folder: lazy-load + render new subtree
-//----------------------------------------
-function handleFolderClick(fullPath, elem) {
-    expandFolder(fullPath);
+function selectPath(path) {
+    document.getElementById("fileTitle").textContent = path;
+    document.getElementById("metaPath").textContent  = path;
 
-    const folderNode = getFolderNode(fullPath);
-
-    // Remove any existing subtree
-    const next = elem.nextSibling;
-    if (next && next.classList && next.classList.contains("indent")) {
-        next.remove();
+    const offset = loader.lookup(path);
+    if (offset === null) {
+        document.getElementById("preview").textContent = "[No preview]";
         return;
     }
 
-    // Create new indent container for subtree
-    const div = document.createElement("div");
-    div.classList.add("indent");
+    const preview = loader.preview(offset, 2048);
+    document.getElementById("preview").textContent = preview;
 
-    renderTree(folderNode, fullPath, div);
-
-    elem.after(div);
+    const meta = loader.getTags(offset);
+    document.getElementById("metaType").textContent = meta.mime;
+    document.getElementById("metaSize").textContent = meta.size + " bytes";
 }
 
-//----------------------------------------
-// Handle selecting a file (preview + metadata)
-//----------------------------------------
-function handleFileSelect(fullPath) {
-    document.getElementById("fileTitle").textContent = fullPath;
-    document.getElementById("metaPath").textContent = fullPath;
+document.getElementById("searchBtn").onclick = () => {
+    const q = document.getElementById("searchBox").value.trim();
+    if (q.length === 0) return;
 
-    const ext = fullPath.split(".").pop();
-    document.getElementById("metaType").textContent = ext;
+    const matches = loader.list_prefix(q);
+    const tree = document.getElementById("tree");
+    tree.innerHTML = "";
 
-    const tags = analyzeTags(fullPath);
-    document.getElementById("metaTags").textContent = tags.join(", ");
-
-    const githubLink =
-        "https://github.com/Quantum918/HomeMap/blob/main/" + fullPath;
-    document.getElementById("openGitHub").onclick = () => {
-        window.open(githubLink, "_blank");
-    };
-
-    loadPreview(fullPath);
-}
-
-//----------------------------------------
-// Classify files (AGI-aware heuristics)
-//----------------------------------------
-function analyzeTags(path) {
-    const t = [];
-
-    if (path.endsWith(".py")) t.push("python");
-    if (path.endsWith(".json")) t.push("json");
-    if (path.endsWith(".sigil.json")) t.push("sigil");
-    if (path.endsWith(".gguf")) t.push("gguf");
-
-    if (/agi/i.test(path)) t.push("agi");
-    if (/glyph/i.test(path)) t.push("glyph");
-    if (/solver/i.test(path)) t.push("solver");
-    if (/model/i.test(path)) t.push("model");
-
-    return t;
-}
-
-//----------------------------------------
-// Load file preview via GitHub raw URL
-//----------------------------------------
-async function loadPreview(fullPath) {
-    if (PREVIEW_CACHE[fullPath]) {
-        document.getElementById("preview").textContent = PREVIEW_CACHE[fullPath];
-        return;
-    }
-
-    const rawURL =
-        "https://raw.githubusercontent.com/Quantum918/HomeMap/main/" + fullPath;
-
-    try {
-        const res = await fetch(rawURL);
-        if (!res.ok) throw new Error("Fetch error");
-
-        const text = await res.text();
-        PREVIEW_CACHE[fullPath] = text;
-
-        document.getElementById("preview").textContent = text;
-    } catch (e) {
-        document.getElementById("preview").textContent =
-            "[Error loading preview: file too large or missing]";
-    }
-}
-
-//----------------------------------------
-// SEARCH ENGINE (full manifest, not tree)
-//----------------------------------------
-function searchFiles(term) {
-    term = term.toLowerCase();
-    const results = ALL_PATHS.filter(p => p.toLowerCase().includes(term));
-    return results.slice(0, 500); // limit for UI safety
-}
-
-// Render search results temporarily in tree pane
-function renderSearchResults(list) {
-    const container = document.getElementById("tree");
-    container.innerHTML = "";
-
-    list.forEach(p => {
+    for (const p of matches) {
         const div = document.createElement("div");
         div.textContent = p;
-        div.classList.add("file");
-        div.onclick = () => handleFileSelect(p);
-        container.appendChild(div);
-    });
-}
+        div.className = p.endsWith("/") ? "folder" : "file";
+        div.onclick = () => selectPath(p);
+        tree.appendChild(div);
+    }
+};
 
-//----------------------------------------
-// Initialize UI after manifest loads
-//----------------------------------------
-async function init() {
-    await loadManifest();
+document.getElementById("resetBtn").onclick = () => {
+    buildTree("/");
+};
 
-    TREE = buildTopLevelTree(ALL_PATHS);
-
-    renderTree(TREE);
-
-    document.getElementById("searchBtn").onclick = () => {
-        const q = document.getElementById("searchBox").value.trim();
-        if (q.length === 0) return;
-        renderSearchResults(searchFiles(q));
-    };
-
-    document.getElementById("resetBtn").onclick = () => {
-        renderTree(TREE);
-    };
-}
-
-init();
+window.onload = init;
