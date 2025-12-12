@@ -1,38 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>HomeMap Explorer</title>
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="main.css">
+<meta charset="UTF-8" />
+<title>Ultra Explorer V5</title>
+<link rel="stylesheet" href="./main.css" />
+<style>
+#debug {
+    white-space: pre-wrap;
+    font-family: monospace;
+    color: #0f0;
+    background: #000;
+    padding: 8px;
+    height: 180px;
+    overflow-y: scroll;
+    border: 1px solid #444;
+}
+</style>
 </head>
-
 <body>
-<div id="app">
-    <div id="tree-pane">
-        <div id="tree-header">
-            <input id="searchBox" placeholder="Search files or paths…"/>
-            <button id="searchBtn">Search</button>
-            <button id="resetBtn">Reset</button>
-        </div>
-        <div id="tree"></div>
-    </div>
 
-    <div id="info-pane">
-        <h2 id="fileTitle">Select a file</h2>
+<h2>Ultra Explorer</h2>
 
-        <div id="meta">
-            <div><b>Path:</b> <span id="metaPath"></span></div>
-            <div><b>Type:</b> <span id="metaType"></span></div>
-            <div><b>Size:</b> <span id="metaSize"></span></div>
-        </div>
+<div id="debug">[Debug log initialized]</div>
 
-        <h3>Preview</h3>
-        <pre id="preview"></pre>
-    </div>
+<div id="tree"></div>
+
+<div id="filePanel">
+    <h3>Select a file</h3>
+    <div><b>Path:</b> <span id="metaPath"></span></div>
+    <div><b>Type:</b> <span id="metaType"></span></div>
+    <div><b>Size:</b> <span id="metaSize"></span></div>
+    <h3>Preview</h3>
+    <pre id="preview"></pre>
 </div>
 
-<script type="module" src="app.js"></script>
-
+<script type="module" src="./app.js"></script>
 </body>
 </html>
