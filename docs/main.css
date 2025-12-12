@@ -1,0 +1,43 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #eee;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background: #222;
+    padding: 20px;
+    border-bottom: 1px solid #555;
+}
+
+h1 {
+    margin: 0;
+    padding-bottom: 5px;
+}
+
+#searchBox {
+    width: 300px;
+    padding: 6px;
+    font-size: 14px;
+}
+
+#tree {
+    padding: 20px;
+    font-family: monospace;
+    white-space: pre;
+}
+
+.folder {
+    color: #4fc3f7;
+    cursor: pointer;
+}
+
+.file {
+    color: #b0bec5;
+}
+
+.hidden {
+    display: none;
+}
