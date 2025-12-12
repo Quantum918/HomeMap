@@ -1,3 +1,6 @@
 docs/data/*.part_* filter=lfs diff=lfs merge=lfs -text
 docs/data/*.bin filter=lfs diff=lfs merge=lfs -text
 docs/data/home.index.bin.part_* filter=lfs diff=lfs merge=lfs -text
+docs/data/home.map.bin.part_00 filter=lfs diff=lfs merge=lfs -text
+docs/data/home.map.bin.part_01 filter=lfs diff=lfs merge=lfs -text
+docs/data/home.tags.bin.part_00 filter=lfs diff=lfs merge=lfs -text
