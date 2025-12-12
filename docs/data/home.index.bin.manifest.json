@@ -1,16 +1,88 @@
 {
-  "file": "home.index.bin",
   "parts": [
-    "home.index.bin.part_00",
-    "home.index.bin.part_01",
-    "home.index.bin.part_02",
-    "home.index.bin.part_03",
-    "home.index.bin.part_04",
-    "home.index.bin.part_05",
-    "home.index.bin.part_06",
-    "home.index.bin.part_07",
-    "home.index.bin.part_08",
-    "home.index.bin.part_09",
-    "home.index.bin.part_10"
+    {
+      "file": "home.index.bin.part_00",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_01",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_02",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_03",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_04",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_05",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_06",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_07",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_08",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_09",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_10",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_11",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_12",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_13",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_14",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_15",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_16",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_17",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_18",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_19",
+      "size": 133
+    },
+    {
+      "file": "home.index.bin.part_20",
+      "size": 133
+    }
   ]
 }
