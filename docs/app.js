@@ -1,161 +1,96 @@
-/******************************************************************
- * ULTRA EXPLORER — AUTHORITATIVE CONTROLLER
- ******************************************************************/
+// ============================================================
+// SIGILAGI — SELF DESCRIBING REPOSITORY AGENT
+// Ultra Explorer / HomeMap
+// ============================================================
 
-/* =========================
-   DEBUG
-========================= */
-const debug = msg => {
+const DBG = msg => {
   const d = document.getElementById("debug");
-  d.textContent += msg + "\n";
+  if (d) d.textContent += msg + "\n";
   console.log(msg);
 };
 
-window.onerror = (m, s, l) =>
-  debug(`[JS ERROR] ${m} @ ${s}:${l}`);
+// ------------------------------------------------------------
+// GLOBAL ERROR TRAPS (nothing fails silently)
+// ------------------------------------------------------------
+window.addEventListener("error", e =>
+  DBG(`[JS ERROR] ${e.message} @ ${e.filename}:${e.lineno}`)
+);
 
-window.onunhandledrejection = e =>
-  debug(`[PROMISE ERROR] ${e.reason}`);
+window.addEventListener("unhandledrejection", e =>
+  DBG(`[PROMISE ERROR] ${e.reason}`)
+);
 
-/* =========================
-   PATH RESOLUTION
-========================= */
-const BASE = location.pathname.replace(/[^/]+$/, "");
-debug(`[BOOT] BASE=${BASE}`);
+// ------------------------------------------------------------
+// BOOT
+// ------------------------------------------------------------
+document.addEventListener("DOMContentLoaded", async () => {
+  DBG("[BOOT] SigilAGI Repository Agent Initializing");
 
-/* =========================
-   WASM LOADER
-========================= */
-let WASM = null;
+  const BASE = location.pathname.replace(/[^\/]+$/, "");
+  DBG("[BOOT] BASE=" + BASE);
 
-async function bootWASM() {
-  debug("[BOOT] Loading manifest_loader.js");
+  const wasmURL = BASE + "bin/manifest_loader.wasm";
+  const loaderURL = BASE + "manifest_loader.js";
 
-  const mod = await import(`${BASE}manifest_loader.js`);
-  debug("[BOOT] JS loader loaded");
+  DBG("[BOOT] Loading loader JS");
 
-  WASM = await mod.default({
-    locateFile: f => `${BASE}bin/${f}`
+  const loader = await import(loaderURL);
+  if (!loader.default) {
+    throw new Error("manifest_loader.js has no default export");
+  }
+
+  const WASM = await loader.default({
+    locateFile: f => BASE + "bin/" + f
   });
 
-  debug("[BOOT] WASM initialized");
-  debug("[EXPORTS] " + Object.keys(WASM).join(", "));
-}
+  DBG("[BOOT] WASM initialized");
+  DBG("[EXPORTS] " + Object.keys(WASM).join(", "));
 
-/* =========================
-   MANIFEST + BINARY ASSEMBLY
-========================= */
-async function loadBinary(manifestURL) {
-  debug(`[MANIFEST] ${manifestURL}`);
-  const m = await fetch(manifestURL).then(r => r.json());
+  window.WASM = WASM; // intentional global for agent access
 
-  const buffers = [];
-  for (const part of m.parts) {
-    const url = `${BASE}data/${part}`;
-    debug(`[FETCH] ${url}`);
-    const buf = await fetch(url).then(r => r.arrayBuffer());
-    buffers.push(new Uint8Array(buf));
+  // Load all binaries
+  await loadBinary("home.map.bin", "_load_map", BASE);
+  await loadBinary("home.tags.bin", "_load_tags", BASE);
+  await loadBinary("home.index.bin", "_load_index", BASE);
+
+  DBG("[BOOT] All binaries loaded");
+
+  initializeAgent();
+});
+
+// ------------------------------------------------------------
+// BINARY LOADER (manifest driven)
+// ------------------------------------------------------------
+async function loadBinary(name, wasmFn, base) {
+  const manifestURL = `${base}data/${name}.manifest.json`;
+  DBG(`[MANIFEST] ${manifestURL}`);
+
+  const manifest = await fetch(manifestURL).then(r => r.json());
+
+  let total = 0;
+  const buffer = new Uint8Array(manifest.total_size);
+
+  for (const part of manifest.parts) {
+    const url = `${base}data/${part.file}`;
+    DBG(`[FETCH] ${url}`);
+
+    const data = new Uint8Array(await fetch(url).then(r => r.arrayBuffer()));
+    buffer.set(data, total);
+    total += data.length;
   }
 
-  const total = buffers.reduce((n,b)=>n+b.length,0);
-  const out = new Uint8Array(total);
-
-  let off = 0;
-  for (const b of buffers) {
-    out.set(b, off);
-    off += b.length;
-  }
-
-  return out;
+  WASM[wasmFn](buffer);
 }
 
-/* =========================
-   TREE CONSTRUCTION
-========================= */
-function buildTree(paths) {
-  const root = {};
-  for (const p of paths) {
-    let node = root;
-    for (const seg of p.split("/")) {
-      node[seg] = node[seg] || {};
-      node = node[seg];
-    }
-  }
-  return root;
-}
+// ------------------------------------------------------------
+// AGENT CORE
+// ------------------------------------------------------------
+function initializeAgent() {
+  DBG("[AGENT] Self-describing agent online");
 
-function renderTree(node, parent, prefix="") {
-  for (const k in node) {
-    const el = document.createElement("div");
-    el.className = "node";
-    el.textContent = prefix + k;
-    el.onclick = () => selectPath(prefix + k);
-    parent.appendChild(el);
-    renderTree(node[k], parent, prefix + k + "/");
-  }
-}
+  document.getElementById("agentRun").onclick = () => {
+    const q = document.getElementById("agentQuery").value.trim();
+    if (!q) return;
 
-/* =========================
-   FILE SELECTION
-========================= */
-function selectPath(path) {
-  document.getElementById("path").textContent = path;
-  document.getElementById("type").textContent =
-    WASM._get_mime(path) || "unknown";
-  document.getElementById("size").textContent =
-    WASM._get_size(path) || "0";
-
-  const ptr = WASM._preview_ptr(path);
-  const txt = WASM._read_preview(ptr);
-  document.getElementById("preview").textContent = txt;
-}
-
-/* =========================
-   THINKING AGENT
-========================= */
-function answerQuestion(q) {
-  const hits = [];
-  const count = WASM._prefix_count();
-  for (let i=0;i<count;i++) {
-    const p = WASM.UTF8ToString(WASM._prefix_ptr(i));
-    if (p.toLowerCase().includes(q.toLowerCase()))
-      hits.push(p);
-  }
-
-  return `Found ${hits.length} relevant paths:\n\n` +
-         hits.slice(0,10).join("\n");
-}
-
-/* =========================
-   BOOT SEQUENCE
-========================= */
-(async function boot() {
-  try {
-    await bootWASM();
-
-    const map = await loadBinary(`${BASE}data/home.map.bin.manifest.json`);
-    const tags = await loadBinary(`${BASE}data/home.tags.bin.manifest.json`);
-    const index = await loadBinary(`${BASE}data/home.index.bin.manifest.json`);
-
-    WASM._load_map(map);
-    WASM._load_tags(tags);
-    WASM._load_index(index);
-
-    debug("[BOOT] All binaries loaded");
-
-    const paths = WASM.list_all_paths();
-    const tree = buildTree(paths);
-    renderTree(tree, document.getElementById("treePane"));
-
-  } catch (e) {
-    debug("[FATAL] " + e.toString());
-  }
-})();
-
-/* =========================
-   UI EVENTS
-========================= */
-document.getElementById("askBtn").onclick = () => {
-  const q = document.getElementById("question").value;
-  document.getElementById("answer").textContent = answerQuestion(q);
-};
+    const result = reasonAboutRepo(q);
+    document
