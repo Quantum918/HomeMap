@@ -1,46 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <title>Ultra Explorer</title>
-<link rel="stylesheet" href="styles.css">
-<style>
-#chat { border-top: 1px solid #333; padding: 8px; }
-#chatLog { height: 200px; overflow:auto; background:#111; color:#0f0; padding:6px; }
-#debug { white-space: pre; font-size: 11px; color: #f55; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-<div id="app">
-  <div id="tree-pane">
-    <input id="searchBox" placeholder="Search paths…">
-    <button id="searchBtn">Search</button>
-    <button id="resetBtn">Reset</button>
-    <div id="tree"></div>
-  </div>
 
-  <div id="info-pane">
-    <h2 id="fileTitle">Select a file</h2>
-    <div>
-      <b>Path:</b> <span id="metaPath"></span><br>
-      <b>Type:</b> <span id="metaType"></span><br>
-      <b>Size:</b> <span id="metaSize"></span>
+<header>
+  <div class="title">Ultra Explorer</div>
+  <input id="searchBox" placeholder="Search paths…" />
+  <button id="searchBtn">Search</button>
+  <button id="resetBtn">Reset</button>
+</header>
+
+<main>
+  <aside id="treePane"></aside>
+
+  <section id="viewer">
+    <h2 id="path">Select a file</h2>
+    <div class="meta">
+      <div>Type: <span id="type"></span></div>
+      <div>Size: <span id="size"></span></div>
     </div>
     <pre id="preview"></pre>
-  </div>
-</div>
+  </section>
+</main>
 
-<div id="chat">
-  <input id="chatInput" placeholder="Ask the system…">
-  <button id="chatSend">Ask</button>
-  <div id="chatLog"></div>
-</div>
+<section id="agent">
+  <h3>Thinking Agent</h3>
+  <input id="question" placeholder="Ask about this repository…" />
+  <button id="askBtn">Ask</button>
+  <pre id="answer"></pre>
+</section>
 
-<h4>Debug</h4>
-<pre id="debug"></pre>
+<footer>
+  <pre id="debug"></pre>
+</footer>
 
-<script type="module" src="agent.js"></script>
-<script type="module" src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
