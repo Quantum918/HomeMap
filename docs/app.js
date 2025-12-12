@@ -1,96 +1,46 @@
-// ============================================================
-// SIGILAGI — SELF DESCRIBING REPOSITORY AGENT
-// Ultra Explorer / HomeMap
-// ============================================================
+/*
+  Ultra Explorer — Main Bootstrap
+  Authoritative entry point
+*/
 
-const DBG = msg => {
-  const d = document.getElementById("debug");
-  if (d) d.textContent += msg + "\n";
+import { AgentCore } from "./agent/core.js";
+import { renderUI } from "./js/ui.js";
+import { mountVisualizer } from "./js/visual_controller.js";
+import { loadGitHubHome } from "./adapters/github_home_adapter.js";
+
+const debugEl = document.getElementById("debug");
+
+function dbg(msg) {
+  if (debugEl) {
+    debugEl.textContent += msg + "\n";
+  }
   console.log(msg);
-};
-
-// ------------------------------------------------------------
-// GLOBAL ERROR TRAPS (nothing fails silently)
-// ------------------------------------------------------------
-window.addEventListener("error", e =>
-  DBG(`[JS ERROR] ${e.message} @ ${e.filename}:${e.lineno}`)
-);
-
-window.addEventListener("unhandledrejection", e =>
-  DBG(`[PROMISE ERROR] ${e.reason}`)
-);
-
-// ------------------------------------------------------------
-// BOOT
-// ------------------------------------------------------------
-document.addEventListener("DOMContentLoaded", async () => {
-  DBG("[BOOT] SigilAGI Repository Agent Initializing");
-
-  const BASE = location.pathname.replace(/[^\/]+$/, "");
-  DBG("[BOOT] BASE=" + BASE);
-
-  const wasmURL = BASE + "bin/manifest_loader.wasm";
-  const loaderURL = BASE + "manifest_loader.js";
-
-  DBG("[BOOT] Loading loader JS");
-
-  const loader = await import(loaderURL);
-  if (!loader.default) {
-    throw new Error("manifest_loader.js has no default export");
-  }
-
-  const WASM = await loader.default({
-    locateFile: f => BASE + "bin/" + f
-  });
-
-  DBG("[BOOT] WASM initialized");
-  DBG("[EXPORTS] " + Object.keys(WASM).join(", "));
-
-  window.WASM = WASM; // intentional global for agent access
-
-  // Load all binaries
-  await loadBinary("home.map.bin", "_load_map", BASE);
-  await loadBinary("home.tags.bin", "_load_tags", BASE);
-  await loadBinary("home.index.bin", "_load_index", BASE);
-
-  DBG("[BOOT] All binaries loaded");
-
-  initializeAgent();
-});
-
-// ------------------------------------------------------------
-// BINARY LOADER (manifest driven)
-// ------------------------------------------------------------
-async function loadBinary(name, wasmFn, base) {
-  const manifestURL = `${base}data/${name}.manifest.json`;
-  DBG(`[MANIFEST] ${manifestURL}`);
-
-  const manifest = await fetch(manifestURL).then(r => r.json());
-
-  let total = 0;
-  const buffer = new Uint8Array(manifest.total_size);
-
-  for (const part of manifest.parts) {
-    const url = `${base}data/${part.file}`;
-    DBG(`[FETCH] ${url}`);
-
-    const data = new Uint8Array(await fetch(url).then(r => r.arrayBuffer()));
-    buffer.set(data, total);
-    total += data.length;
-  }
-
-  WASM[wasmFn](buffer);
 }
 
-// ------------------------------------------------------------
-// AGENT CORE
-// ------------------------------------------------------------
-function initializeAgent() {
-  DBG("[AGENT] Self-describing agent online");
+dbg("[BOOT] Ultra Explorer starting");
 
-  document.getElementById("agentRun").onclick = () => {
-    const q = document.getElementById("agentQuery").value.trim();
-    if (!q) return;
+// ------------------------------------------------------------------
+// Agent initialization
+// ------------------------------------------------------------------
+const agent = new AgentCore(dbg);
 
-    const result = reasonAboutRepo(q);
-    document
+// Wire UI immediately
+renderUI(agent, dbg);
+
+// ------------------------------------------------------------------
+// Load GitHub-backed HomeMap and activate system
+// ------------------------------------------------------------------
+(async () => {
+  try {
+    dbg("[LOAD] Loading GitHub HomeMap");
+
+    const graph = await loadGitHubHome(dbg);
+    agent.ingest("github", graph);
+
+    dbg("[READY] HomeMap loaded");
+    mountVisualizer(agent, dbg);
+
+  } catch (e) {
+    dbg("[FATAL] Load failed: " + (e?.message || e));
+  }
+})();
