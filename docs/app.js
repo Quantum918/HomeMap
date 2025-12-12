@@ -5,7 +5,7 @@ const DATA = "./data";
 const BIN_MAP   = DATA + "/home.map.bin";
 const BIN_TAGS  = DATA + "/home.tags.bin";
 const BIN_INDEX = DATA + "/home.index.bin";
-const WASM_FILE = "./bin/manifest_loader.wasm";
+const WASM_FILE = "bin/manifest_loader.wasm";
 
 let loader = null;
 
