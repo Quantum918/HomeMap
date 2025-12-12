@@ -1,87 +1,161 @@
-import { HomeMapAgent } from "./agent.js";
+/******************************************************************
+ * ULTRA EXPLORER — AUTHORITATIVE CONTROLLER
+ ******************************************************************/
 
-function dbg(m){ 
-  debug.textContent += m + "\n"; 
-  console.log(m);
-}
+/* =========================
+   DEBUG
+========================= */
+const debug = msg => {
+  const d = document.getElementById("debug");
+  d.textContent += msg + "\n";
+  console.log(msg);
+};
 
-let Ultra = null;
-let Agent = null;
+window.onerror = (m, s, l) =>
+  debug(`[JS ERROR] ${m} @ ${s}:${l}`);
 
-document.addEventListener("DOMContentLoaded", async () => {
-  dbg("[BOOT] Starting Ultra Explorer V9");
+window.onunhandledrejection = e =>
+  debug(`[PROMISE ERROR] ${e.reason}`);
 
-  const base = location.pathname.replace(/[^\/]+$/, "");
-  const loader = await import(base + "manifest_loader.js");
+/* =========================
+   PATH RESOLUTION
+========================= */
+const BASE = location.pathname.replace(/[^/]+$/, "");
+debug(`[BOOT] BASE=${BASE}`);
 
-  Ultra = await loader.default({
-    locateFile: p => base + "bin/" + p
+/* =========================
+   WASM LOADER
+========================= */
+let WASM = null;
+
+async function bootWASM() {
+  debug("[BOOT] Loading manifest_loader.js");
+
+  const mod = await import(`${BASE}manifest_loader.js`);
+  debug("[BOOT] JS loader loaded");
+
+  WASM = await mod.default({
+    locateFile: f => `${BASE}bin/${f}`
   });
 
-  dbg("[WASM] Loaded");
+  debug("[BOOT] WASM initialized");
+  debug("[EXPORTS] " + Object.keys(WASM).join(", "));
+}
 
-  // Load binaries via manifests
-  const loadBin = async (name) => {
-    const m = await fetch(base+"data/"+name+".manifest.json").then(r=>r.json());
-    const parts = [];
-    for (const p of m.parts) {
-      dbg("[FETCH] "+p);
-      parts.push(await fetch(base+"data/"+p).then(r=>r.arrayBuffer()));
+/* =========================
+   MANIFEST + BINARY ASSEMBLY
+========================= */
+async function loadBinary(manifestURL) {
+  debug(`[MANIFEST] ${manifestURL}`);
+  const m = await fetch(manifestURL).then(r => r.json());
+
+  const buffers = [];
+  for (const part of m.parts) {
+    const url = `${BASE}data/${part}`;
+    debug(`[FETCH] ${url}`);
+    const buf = await fetch(url).then(r => r.arrayBuffer());
+    buffers.push(new Uint8Array(buf));
+  }
+
+  const total = buffers.reduce((n,b)=>n+b.length,0);
+  const out = new Uint8Array(total);
+
+  let off = 0;
+  for (const b of buffers) {
+    out.set(b, off);
+    off += b.length;
+  }
+
+  return out;
+}
+
+/* =========================
+   TREE CONSTRUCTION
+========================= */
+function buildTree(paths) {
+  const root = {};
+  for (const p of paths) {
+    let node = root;
+    for (const seg of p.split("/")) {
+      node[seg] = node[seg] || {};
+      node = node[seg];
     }
-    const size = parts.reduce((s,b)=>s+b.byteLength,0);
-    const buf = new Uint8Array(size);
-    let off=0;
-    for (const b of parts){ buf.set(new Uint8Array(b),off); off+=b.byteLength; }
-    return buf;
-  };
+  }
+  return root;
+}
 
-  const map  = await loadBin("home.map.bin");
-  const tags = await loadBin("home.tags.bin");
-  const idx  = await loadBin("home.index.bin");
-
-  Ultra._load_map(map);
-  Ultra._load_tags(tags);
-  Ultra._load_index(idx);
-
-  dbg("[DATA] HomeMap loaded into WASM");
-
-  Agent = new HomeMapAgent(Ultra);
-
-  buildTree("/");
-  wireChat();
-});
-
-function buildTree(prefix){
-  tree.innerHTML="";
-  const items = Ultra._list_prefix(prefix);
-  for(const p of items){
-    const d=document.createElement("div");
-    d.textContent=p;
-    d.onclick=()=>selectPath(p);
-    tree.appendChild(d);
+function renderTree(node, parent, prefix="") {
+  for (const k in node) {
+    const el = document.createElement("div");
+    el.className = "node";
+    el.textContent = prefix + k;
+    el.onclick = () => selectPath(prefix + k);
+    parent.appendChild(el);
+    renderTree(node[k], parent, prefix + k + "/");
   }
 }
 
-function selectPath(p){
-  fileTitle.textContent=p;
-  metaPath.textContent=p;
-  const off=Ultra._lookup_path(p);
-  if(off!==0xffffffff){
-    preview.textContent=Ultra._read_preview(off,1024);
-    metaSize.textContent=Ultra._get_size(off);
-    metaType.textContent=Ultra._get_mime(off);
-  }
+/* =========================
+   FILE SELECTION
+========================= */
+function selectPath(path) {
+  document.getElementById("path").textContent = path;
+  document.getElementById("type").textContent =
+    WASM._get_mime(path) || "unknown";
+  document.getElementById("size").textContent =
+    WASM._get_size(path) || "0";
+
+  const ptr = WASM._preview_ptr(path);
+  const txt = WASM._read_preview(ptr);
+  document.getElementById("preview").textContent = txt;
 }
 
-function wireChat(){
-  chatSend.onclick=()=>{
-    const q=chatInput.value.trim();
-    if(!q)return;
-    const out=Agent.think(q);
-    chatLog.textContent +=
-      "\n> "+q+"\n"+
-      out.reasoning.join("\n")+"\n\n"+
-      out.evidence.map(e=>`• ${e.path}\n  ${e.snippet}`).join("\n\n")+
-      "\n";
-  };
+/* =========================
+   THINKING AGENT
+========================= */
+function answerQuestion(q) {
+  const hits = [];
+  const count = WASM._prefix_count();
+  for (let i=0;i<count;i++) {
+    const p = WASM.UTF8ToString(WASM._prefix_ptr(i));
+    if (p.toLowerCase().includes(q.toLowerCase()))
+      hits.push(p);
+  }
+
+  return `Found ${hits.length} relevant paths:\n\n` +
+         hits.slice(0,10).join("\n");
 }
+
+/* =========================
+   BOOT SEQUENCE
+========================= */
+(async function boot() {
+  try {
+    await bootWASM();
+
+    const map = await loadBinary(`${BASE}data/home.map.bin.manifest.json`);
+    const tags = await loadBinary(`${BASE}data/home.tags.bin.manifest.json`);
+    const index = await loadBinary(`${BASE}data/home.index.bin.manifest.json`);
+
+    WASM._load_map(map);
+    WASM._load_tags(tags);
+    WASM._load_index(index);
+
+    debug("[BOOT] All binaries loaded");
+
+    const paths = WASM.list_all_paths();
+    const tree = buildTree(paths);
+    renderTree(tree, document.getElementById("treePane"));
+
+  } catch (e) {
+    debug("[FATAL] " + e.toString());
+  }
+})();
+
+/* =========================
+   UI EVENTS
+========================= */
+document.getElementById("askBtn").onclick = () => {
+  const q = document.getElementById("question").value;
+  document.getElementById("answer").textContent = answerQuestion(q);
+};
