@@ -1,0 +1,158 @@
+/* GLOBAL */
+body {
+    margin: 0;
+    background: #0d0d0d;
+    color: #e6e6e6;
+    font-family: Consolas, Menlo, monospace;
+}
+
+#container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* LEFT PANE — FILE TREE */
+#tree-pane {
+    width: 42%;
+    border-right: 2px solid #222;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #111;
+}
+
+#tree-header {
+    padding: 10px;
+    background: #181818;
+    border-bottom: 1px solid #333;
+    display: flex;
+    gap: 6px;
+}
+
+#searchBox {
+    flex: 1;
+    padding: 6px;
+    border: 1px solid #333;
+    background: #000;
+    color: #fff;
+}
+
+#searchBtn,
+#resetBtn {
+    cursor: pointer;
+    background: #333;
+    color: #ddd;
+    border: none;
+    padding: 6px 10px;
+    transition: background .2s;
+}
+
+#searchBtn:hover,
+#resetBtn:hover {
+    background: #444;
+}
+
+#tree {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+/* TREE COLORS + STATES */
+.folder {
+    cursor: pointer;
+    color: #6cf;
+    user-select: none;
+}
+
+.folder:hover {
+    color: #9df;
+}
+
+.file {
+    cursor: pointer;
+    color: #ccc;
+    user-select: none;
+}
+
+.file:hover {
+    color: #fff;
+}
+
+.indent {
+    padding-left: 20px;
+}
+
+.hidden {
+    display: none;
+}
+
+/* RIGHT PANE — METADATA + PREVIEW */
+#info-pane {
+    width: 58%;
+    padding: 15px;
+    overflow-y: auto;
+    background: #0f0f0f;
+}
+
+#fileTitle {
+    margin-top: 0;
+    color: #9df;
+    font-size: 22px;
+}
+
+/* METADATA BOX */
+#meta {
+    background: #141414;
+    padding: 12px;
+    border: 1px solid #333;
+    margin-bottom: 15px;
+    font-size: 14px;
+    line-height: 1.4em;
+}
+
+.metaBtn {
+    margin-top: 12px;
+    background: #2d2d2d;
+    color: #eee;
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.metaBtn:hover {
+    background: #444;
+}
+
+/* PREVIEW BOX */
+#preview {
+    background: #000;
+    border: 1px solid #222;
+    padding: 12px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    max-height: 70vh;
+    font-size: 13px;
+    line-height: 1.4em;
+}
+
+/* FILE TYPE COLORS */
+.file.py     { color: #8f8; }
+.file.json   { color: #ffb; }
+.file.sigil  { color: #e58cff; }
+.file.gguf   { color: #6cf; }
+.file.model  { color: #f77; }
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 900px) {
+    #container {
+        flex-direction: column;
+    }
+    #tree-pane, #info-pane {
+        width: 100%;
+        height: 50vh;
+    }
+}

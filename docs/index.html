@@ -1,23 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>HomeMap – Full System File Explorer</title>
-    <link rel="stylesheet" href="main.css">
+    <meta charset="UTF-8" />
+    <title>Ultra Explorer v2 — AGI Filesystem Console</title>
+    <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
-    <header>
-        <h1>HomeMap – Full System File Explorer</h1>
-        <p>Loaded from: home_full_manifest.txt</p>
+    <div id="container">
 
-        <input id="searchBox" type="text" placeholder="Search files, directories, extensions, tags…">
-        <button id="searchBtn">Search</button>
-        <button id="resetBtn">Reset</button>
+        <!-- LEFT PANE: TREE -->
+        <div id="tree-pane">
+            <div id="tree-header">
+                <input id="searchBox" placeholder="Search files or paths…" />
+                <button id="searchBtn">Search</button>
+                <button id="resetBtn">Reset</button>
+            </div>
+            <div id="tree"></div>
+        </div>
 
-        <div id="stats"></div>
-    </header>
+        <!-- RIGHT PANE: METADATA + PREVIEW -->
+        <div id="info-pane">
+            <h2 id="fileTitle">Select a file</h2>
 
-    <div id="tree"></div>
+            <div id="meta">
+                <div><b>Path:</b> <span id="metaPath"></span></div>
+                <div><b>Type:</b> <span id="metaType"></span></div>
+                <div><b>Size:</b> <span id="metaSize"></span></div>
+                <div><b>Tags:</b> <span id="metaTags"></span></div>
+
+                <button id="openGitHub" class="metaBtn">Open on GitHub</button>
+            </div>
+
+            <h3>Preview</h3>
+            <pre id="preview"></pre>
+        </div>
+
+    </div>
 
     <script src="app.js"></script>
 </body>
