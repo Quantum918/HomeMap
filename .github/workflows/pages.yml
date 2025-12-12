@@ -1,0 +1,44 @@
+name: Deploy HomeMap Pages (LFS Enabled)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository (WITH LFS)
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Verify binaries are real
+        run: |
+          echo "Verifying LFS materialization"
+          ls -lh docs/data/home.map.bin.part_00
+          wc -c docs/data/home.map.bin.part_00
+
+      - name: Prepare Pages artifact
+        run: |
+          mkdir -p _site
+          cp -r docs/* _site/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
