@@ -3,44 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <title>Ultra Explorer</title>
-
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="main.css">
-
+<style>
+#chat { border-top: 1px solid #333; padding: 8px; }
+#chatLog { height: 200px; overflow:auto; background:#111; color:#0f0; padding:6px; }
+#debug { white-space: pre; font-size: 11px; color: #f55; }
+</style>
 </head>
 
 <body>
-<h1>Ultra Explorer</h1>
-
-<div id="debug" style="background:black;color:#0f0;padding:10px;height:180px;overflow:auto;">
-[Debug log initialized]
-</div>
-
 <div id="app">
-    <div id="tree-pane">
-        <div id="tree-header">
-            <input id="searchBox" placeholder="Search files or paths…"/>
-            <button id="searchBtn">Search</button>
-            <button id="resetBtn">Reset</button>
-        </div>
-        <div id="tree"></div>
-    </div>
+  <div id="tree-pane">
+    <input id="searchBox" placeholder="Search paths…">
+    <button id="searchBtn">Search</button>
+    <button id="resetBtn">Reset</button>
+    <div id="tree"></div>
+  </div>
 
-    <div id="info-pane">
-        <h2 id="fileTitle">Select a file</h2>
-        <div id="meta">
-            <div><b>Path:</b> <span id="metaPath"></span></div>
-            <div><b>Type:</b> <span id="metaType"></span></div>
-            <div><b>Size:</b> <span id="metaSize"></span></div>
-        </div>
-
-        <h3>Preview</h3>
-        <pre id="preview"></pre>
+  <div id="info-pane">
+    <h2 id="fileTitle">Select a file</h2>
+    <div>
+      <b>Path:</b> <span id="metaPath"></span><br>
+      <b>Type:</b> <span id="metaType"></span><br>
+      <b>Size:</b> <span id="metaSize"></span>
     </div>
+    <pre id="preview"></pre>
+  </div>
 </div>
 
-<!-- CRITICAL FIX: root-relative script path -->
-<script type="module" src="/HomeMap/app.js"></script>
+<div id="chat">
+  <input id="chatInput" placeholder="Ask the system…">
+  <button id="chatSend">Ask</button>
+  <div id="chatLog"></div>
+</div>
 
+<h4>Debug</h4>
+<pre id="debug"></pre>
+
+<script type="module" src="agent.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
