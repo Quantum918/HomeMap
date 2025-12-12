@@ -1,1 +1,17 @@
-{ "parts": ["home.index.bin.part_aa","home.index.bin.part_ab","home.index.bin.part_ac","home.index.bin.part_ad","home.index.bin.part_ae","home.index.bin.part_af","home.index.bin.part_ag","home.index.bin.part_ah","home.index.bin.part_ai","home.index.bin.part_aj","home.index.bin.part_ak"] }
+{
+  "files": [
+    "home.index.bin.part_00",
+    "home.index.bin.part_01",
+    "home.index.bin.part_02",
+    "home.index.bin.part_03",
+    "home.index.bin.part_04",
+    "home.index.bin.part_05",
+    "home.index.bin.part_06",
+    "home.index.bin.part_07",
+    "home.index.bin.part_08",
+    "home.index.bin.part_09",
+    "home.index.bin.part_10"
+  ],
+  "original_size": 1033851808,
+  "part_size": 99614720
+}
