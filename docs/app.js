@@ -1,175 +1,144 @@
-/* ============================
-   INLINE DEBUG CONSOLE OVERLAY
-   ============================ */
-(function () {
-    const box = document.createElement("div");
-    box.id = "INLINE_CONSOLE";
-    box.style.position = "fixed";
-    box.style.bottom = "0";
-    box.style.left = "0";
-    box.style.width = "100%";
-    box.style.height = "200px";
-    box.style.background = "rgba(0,0,0,0.85)";
-    box.style.color = "#00ffcc";
-    box.style.fontFamily = "monospace";
-    box.style.fontSize = "12px";
-    box.style.overflowY = "auto";
-    box.style.zIndex = "999999";
-    box.style.padding = "4px";
-    box.style.borderTop = "1px solid #00ffcc";
-    box.style.whiteSpace = "pre-wrap";
-
-    const toggle = document.createElement("button");
-    toggle.innerText = "Console";
-    toggle.style.position = "fixed";
-    toggle.style.bottom = "200px";
-    toggle.style.right = "10px";
-    toggle.style.zIndex = "1000000";
-    toggle.style.padding = "5px 8px";
-    toggle.style.background = "#000";
-    toggle.style.color = "#0f0";
-    toggle.style.border = "1px solid #0f0";
-    toggle.style.borderRadius = "5px";
-    toggle.style.fontSize = "12px";
-    toggle.onclick = () => {
-        box.style.display = box.style.display === "none" ? "block" : "none";
-    };
-
-    document.addEventListener("DOMContentLoaded", () => {
-        document.body.appendChild(box);
-        document.body.appendChild(toggle);
-    });
-
-    function log(msg) {
-        const line = document.createElement("div");
-        line.textContent = msg;
-        box.appendChild(line);
-        box.scrollTop = box.scrollHeight;
-    }
-
-    const _log = console.log;
-    console.log = function (...args) {
-        _log.apply(console, args);
-        log("[LOG] " + args.join(" "));
-    };
-
-    const _err = console.error;
-    console.error = function (...args) {
-        _err.apply(console, args);
-        log("[ERROR] " + args.join(" "));
-    };
-
-    window.onerror = function (msg, src, line, col, err) {
-        log("[ONERROR] " + msg + " @ " + src + ":" + line + ":" + col);
-    };
-
-    log("Inline JS console active.");
-})();
-
-/* ============================
-   ORIGINAL APP LOGIC
-   ============================ */
 import { ManifestLoader } from "./manifest_loader.js";
 
-const DATA = "./data";
-const BIN_MAP   = DATA + "/home.map.bin";
-const BIN_TAGS  = DATA + "/home.tags.bin";
-const BIN_INDEX = DATA + "/home.index.bin";
-const WASM_FILE = "./bin/manifest_loader.wasm";
+// =========================
+// CONFIG
+// =========================
+const ROOT = ".";                // docs/
+const DATA = ROOT + "/data";     // docs/data
+
+// Split map file components
+const MAP_MANIFEST_URL = `${DATA}/home.map.bin.manifest.json`;
+
+const TAGS_URL  = `${DATA}/home.tags.bin`;   // unchanged
+const INDEX_URL = `${DATA}/home.index.bin`;  // unchanged
+const WASM_FILE = `${ROOT}/bin/manifest_loader.wasm`;
 
 let loader = null;
 
+// =========================
+// UTIL: DOWNLOAD AS UINT8ARRAY
+// =========================
 async function fetchBin(url) {
-    console.log("[fetchBin] loading", url);
     const res = await fetch(url);
-    const buf = await res.arrayBuffer();
-    console.log("[fetchBin] loaded", url, buf.byteLength);
-    return new Uint8Array(buf);
+    if (!res.ok) throw new Error("HTTP " + res.status + " → " + url);
+    return new Uint8Array(await res.arrayBuffer());
 }
 
+// =============================
+// NEW: REBUILD home.map.bin FROM PARTS
+// =============================
+async function loadSplitMap() {
+    console.log("[MAP] Loading manifest:", MAP_MANIFEST_URL);
+
+    const manifestRes = await fetch(MAP_MANIFEST_URL);
+    if (!manifestRes.ok) throw new Error("Missing map manifest!");
+    const manifest = await manifestRes.json();
+
+    const parts = manifest.parts;     // ["home.map.bin.part_aa", "home.map.bin.part_ab", ...]
+    if (!parts || parts.length === 0)
+        throw new Error("Map manifest has no parts.");
+
+    console.log("[MAP] Found parts:", parts.length);
+
+    let total = 0;
+    const chunks = [];
+
+    for (const p of parts) {
+        const url = `${DATA}/${p}`;
+        console.log("[MAP] Fetch:", url);
+        const bin = await fetchBin(url);
+        chunks.push(bin);
+        total += bin.length;
+    }
+
+    console.log("[MAP] Total reconstructed size:", total);
+
+    // Allocate final merged buffer
+    const merged = new Uint8Array(total);
+
+    let offset = 0;
+    for (const chunk of chunks) {
+        merged.set(chunk, offset);
+        offset += chunk.length;
+    }
+
+    console.log("[MAP] Reconstruction complete.");
+    return merged;
+}
+
+// ===============================
+// MAIN INITIALIZATION
+// ===============================
 async function init() {
-    console.log("[INIT] Loading WASM + binaries...");
     try {
+        console.log("[INIT] Loading WASM…");
         const wasmBytes = await fetchBin(WASM_FILE);
-        const mapBin    = await fetchBin(BIN_MAP);
-        const tagsBin   = await fetchBin(BIN_TAGS);
-        const indexBin  = await fetchBin(BIN_INDEX);
 
-        console.log("[INIT] Instantiating loader...");
+        console.log("[INIT] Loading SPLIT MAP…");
+        const mapBin = await loadSplitMap();
+
+        console.log("[INIT] Loading TAGS + INDEX…");
+        const tagsBin  = await fetchBin(TAGS_URL);
+        const indexBin = await fetchBin(INDEX_URL);
+
         loader = new ManifestLoader(wasmBytes, mapBin, tagsBin, indexBin);
-        console.log("[INIT] Loader ready.");
 
+        console.log("[INIT] Loader OK");
         await buildTree("/");
-    } catch (err) {
-        console.error("[INIT ERROR]", err);
+
+    } catch (e) {
+        console.error("[FATAL INIT ERROR]", e);
+        document.body.innerHTML = `<pre style="color:red;">FATAL ERROR:\n${e}</pre>`;
     }
 }
 
+// =================================
+// TREE RENDERING
+// =================================
 async function buildTree(prefix) {
     const tree = document.getElementById("tree");
     tree.innerHTML = "";
 
-    console.log("[Tree] Listing prefix:", prefix);
-    let items = [];
-
-    try {
-        items = loader.list_prefix(prefix);
-        console.log("[Tree] Found", items.length, "items.");
-    } catch (err) {
-        console.error("[Tree ERROR]", err);
-        return;
-    }
-
+    const items = loader.list_prefix(prefix);
     items.sort();
 
     for (const p of items) {
         const div = document.createElement("div");
         div.className = p.endsWith("/") ? "folder" : "file";
-        div.textContent = p;
+        div.textContent = p.replace(prefix, "");
         div.onclick = () => selectPath(p);
         tree.appendChild(div);
     }
 }
 
-async function selectPath(p) {
-    console.log("[Select]", p);
+function selectPath(path) {
+    document.getElementById("fileTitle").textContent = path;
+    document.getElementById("metaPath").textContent = path;
 
-    const info = document.getElementById("info");
-    const preview = document.getElementById("preview");
-    preview.textContent = "";
-
-    if (!loader) {
-        console.error("Loader not ready");
+    const offset = loader.lookup(path);
+    if (offset === null) {
+        document.getElementById("preview").textContent = "[No preview]";
         return;
     }
 
-    try {
-        const size = loader.get_size(p);
-        const mime = loader.get_mime(p);
-        const tags = loader.get_tags(p);
-        const textPreview = loader.preview(p);
+    const preview = loader.preview(offset, 2048);
+    document.getElementById("preview").textContent = preview;
 
-        info.innerHTML =
-            "Path: " + p + "<br>" +
-            "Type: " + mime + "<br>" +
-            "Size: " + size + "<br>" +
-            "Tags: " + tags.join(", ");
-
-        preview.textContent = textPreview;
-    } catch (err) {
-        console.error("[Select ERROR]", err);
-    }
+    const meta = loader.getTags(offset);
+    document.getElementById("metaType").textContent = meta.mime;
+    document.getElementById("metaSize").textContent = meta.size + " bytes";
 }
 
+// Search
 document.getElementById("searchBtn").onclick = () => {
     const q = document.getElementById("searchBox").value.trim();
-    console.log("[Search]", q);
-    if (q.length === 0) return;
+    if (!q) return;
 
-    const matches = loader.list_prefix(q);
+    const results = loader.list_prefix(q);
     const tree = document.getElementById("tree");
     tree.innerHTML = "";
-    for (const p of matches) {
+
+    for (const p of results) {
         const div = document.createElement("div");
         div.textContent = p;
         div.className = p.endsWith("/") ? "folder" : "file";
@@ -178,8 +147,6 @@ document.getElementById("searchBtn").onclick = () => {
     }
 };
 
-document.getElementById("resetBtn").onclick = () => {
-    buildTree("/");
-};
+document.getElementById("resetBtn").onclick = () => buildTree("/");
 
 window.onload = init;
