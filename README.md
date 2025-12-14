@@ -161,4 +161,100 @@ No destructive execution is permitted.
 
 5. Knowledge Index
 
-All results are written to a
+All results are written to a single artifact:
+
+data/homemap_index.json
+
+Each entry is keyed by absolute path and contains:
+
+Metadata
+
+Classification
+
+Explanation
+
+Demonstration record (if applicable)
+
+
+This index is intended for downstream systems.
+
+
+---
+
+Running HomeMap
+
+Basic Scan
+
+python bin/homemap.py
+
+By default, HomeMap scans $HOME.
+
+Custom Root
+
+python bin/homemap.py --root /path/to/scan
+
+
+---
+
+Output
+
+After completion, HomeMap produces:
+
+data/homemap_index.json
+
+Optional visual summaries (if UI enabled)
+
+
+These outputs are stable and versionable.
+
+
+---
+
+Why HomeMap Exists
+
+Most systems know how to run code, but not what the code is.
+
+HomeMap establishes:
+
+Context
+
+Orientation
+
+Trust
+
+Discoverability
+
+
+It is the foundation upon which higher-order intelligence systems operate.
+
+
+---
+
+Status
+
+HomeMap is an active system.
+
+Completion is defined by:
+
+Successful full-directory scan
+
+Accurate explanation of discovered files
+
+Safe demonstrations where applicable
+
+Stable index generation
+
+
+
+---
+
+License
+
+MIT.
+
+
+---
+
+Author
+
+Quantum918
